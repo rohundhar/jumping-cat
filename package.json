@@ -1,0 +1,29 @@
+{
+  "name": "safari2024",
+  "version": "1.0.0",
+  "description": "",
+  "main": "main.ts",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "drive": "npx tsc && node dist/main.js",
+    "image": "npx tsc && node dist/TaggingService/main.js",
+    "faceTrain": "npx tsc && node dist/FaceTrainingService/main.js",
+    "web": "npx tsc && node dist/web/web.js"
+  },
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@google-cloud/vision": "^4.3.2",
+    "express": "^4.21.1",
+    "face-api.js": "^0.22.2",
+    "fs": "^0.0.1-security",
+    "googleapis": "^144.0.0",
+    "path": "^0.12.7",
+    "tsc": "^2.0.4",
+    "typescript-rest": "^3.0.4"
+  },
+  "devDependencies": {
+    "@types/node": "^22.7.5",
+    "typescript": "^5.6.3"
+  }
+}
