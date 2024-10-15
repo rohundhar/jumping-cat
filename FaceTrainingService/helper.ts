@@ -29,7 +29,7 @@ async function prepareTrainingData(assetsDir: string): Promise<{ [label: string]
 
 
 export async function getTrainingData() {
-    const assetsDirectory = '../Assets'; // Replace with your actual assets directory
+    const assetsDirectory = './Assets'; // Replace with your actual assets directory
     const imagePathsByLabel = await prepareTrainingData(assetsDirectory);
 
     if (Object.keys(imagePathsByLabel).length === 0) {
