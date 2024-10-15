@@ -2,5 +2,5 @@
 ./TaggingService/safari-private-key.json
 ./token.json
 ./node_modules
-**/dist
-./dist
+**/dist/
+./dist/
