@@ -1,3 +1,4 @@
-./node_modules
+**/node_modules
 ./TaggingService/safari-private-key.json
 ./token.json
+./node_modules
