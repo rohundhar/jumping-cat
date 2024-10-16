@@ -60,7 +60,9 @@ const imageInfos = [
     { id: '1BMNd-RDmdmH6HcUq3ZO4MJVcy9Ab6BAw', url: 'https://drive.google.com/uc?id=1BMNd-RDmdmH6HcUq3ZO4MJVcy9Ab6BAw&export=download' },
 ];
 
-batchTagImages(imageInfos)
+
+const main = () => {
+    batchTagImages(imageInfos)
     .then((taggedImages) => {
         for (const imageData of taggedImages) {
             console.log(`Image: ${imageData.imageUrl}, Tags: ${imageData.tags}`);
@@ -69,3 +71,4 @@ batchTagImages(imageInfos)
     .catch((error) => {
         console.error('Overall error:', error);
     });
+}

@@ -8,22 +8,28 @@
     "drive": "npx tsc && node dist/main.js",
     "image": "npx tsc && node dist/TaggingService/main.js",
     "faceTrain": "npx tsc && node dist/FaceTrainingService/main.js",
-    "web": "npx tsc && node dist/web/web.js"
+    "web": "npx tsc && node dist/web/web.js",
+    "clean": "rm -rf dist/"
   },
   "author": "",
   "license": "ISC",
   "dependencies": {
     "@google-cloud/vision": "^4.3.2",
+    "@types/cli-progress": "^3.11.6",
+    "@types/p-limit": "^2.2.0",
+    "canvas": "^2.11.2",
+    "cli-progress": "^3.12.0",
     "express": "^4.21.1",
     "face-api.js": "^0.22.2",
     "fs": "^0.0.1-security",
     "googleapis": "^144.0.0",
+    "p-limit": "^3.1.0",
     "path": "^0.12.7",
     "tsc": "^2.0.4",
     "typescript-rest": "^3.0.4"
   },
   "devDependencies": {
-    "@types/node": "^22.7.5",
+    "@types/node": "^18.17.1",
     "typescript": "^5.6.3"
   }
 }

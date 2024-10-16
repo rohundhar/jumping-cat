@@ -36,7 +36,7 @@ export async function getTrainingData() {
         console.error("No training data found. Exiting.");
         return {};
     }
-    console.log('Prepared training data:', imagePathsByLabel); // You can now use this data in your face training module
+    // console.log('Prepared training data:', imagePathsByLabel); // You can now use this data in your face training module
 
     return imagePathsByLabel;
 

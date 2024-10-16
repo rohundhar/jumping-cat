@@ -1,6 +1,9 @@
 import * as fs from 'fs';
+import * as faceapi from 'face-api.js';
+import canvas from 'canvas';
 import getGDriveService from './auth';
 import { drive_v3 } from 'googleapis';
+import { getFaceMatcher } from './FaceTrainingService/main';
 
 async function main() {
   const service = await getGDriveService();
@@ -130,4 +133,27 @@ async function getFolder() {
     }
       
 }
-getFolder();
+
+// getFolder();
+
+const recognize = async () => {
+  const url = `Assets/Testing/People1.jpg`;
+
+  const faceMatcher = await getFaceMatcher();
+
+  try {
+    const img = await canvas.loadImage(url);
+    const queryDetections = await faceapi.detectAllFaces(img as any).withFaceLandmarks().withFaceDescriptors();
+  
+    for (const detection of queryDetections) {
+        const bestMatch = faceMatcher.findBestMatch(detection.descriptor!);
+        console.log(`Best match: ${bestMatch.label} (confidence: ${bestMatch.distance})`);
+    }
+  } catch (err) {
+    console.log('Error while trying to detect Image', url, err);
+  }
+
+
+}
+
+recognize();
