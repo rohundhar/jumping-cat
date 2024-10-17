@@ -1,13 +1,55 @@
 import * as fs from 'fs';
 import * as faceapi from 'face-api.js';
+import exifr from 'exifr';
 import canvas from 'canvas';
 import { getFaceMatcher } from './FaceTrainingService/main.js';
-import { getFolder, getOrUploadManyVideos, getOrUploadVideo } from './GDrive/files.js';
+import { getFolder, getImageContent, getOrUploadManyVideos, getOrUploadVideo } from './GDrive/files.js';
 import { MimeType } from './GDrive/types.js';
 import { drive_v3 } from 'googleapis';
+import pLimit from 'p-limit';
+
+const folderName = 'Safari 2024';
+
+export const extractMediaMetadata = async () => {
+  const allFilesInDrive = await getFolder(folderName);
+
+  const limit = pLimit(5);
+
+  const allFiles = allFilesInDrive.slice(0,10);
+
+  await Promise.all(allFiles.map(async (file) => {
+      await limit(async () => { // Wrap the processing function with limit
+        try {
+          switch (file.mimeType as MimeType) {
+            case MimeType.MP4:
+            case MimeType.QUICKTIME: {
+              break;
+            }
+            case MimeType.HEIC:
+            case MimeType.JPG:
+            case MimeType.PNG: {
+              if (file.id) {
+                const media = await getImageContent(file.id)
+                const metadata = await exifr.parse(media);
+                console.log('Parsed Media', metadata);
+              }
+              break;
+            }
+            default: {
+              console.log('Unknown File Type', file.mimeType);
+            }
+          }
+        } catch (error) {
+            console.error(`Error processing ${file.name}:`, error);
+        } finally { // Ensure progress bar updates even on error
+        }
+      });
+    }));
+
+
+}
 
 const main = async () => {
-  const folderName = 'Safari 2024';
   const allFilesInDrive = await getFolder(folderName);
 
 
@@ -61,6 +103,4 @@ const recognize = async () => {
     console.log('Error while trying to detect Image', url, err);
   }
 }
-
-main();
 

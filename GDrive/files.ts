@@ -100,7 +100,10 @@ export const getFolder = async (name: string): Promise<drive_v3.Schema$File[]> =
     return [];
 }
 
-export const getImageContent = async (service: drive_v3.Drive, fileId: string): Promise<Buffer> => {
+export const getImageContent = async (fileId: string): Promise<Buffer> => {
+
+  const service = await getGDriveService();
+
   try {
       const res = await service.files.get({ fileId, alt: 'media' }, { responseType: 'arraybuffer' });
       return Buffer.from(res.data as ArrayBuffer);

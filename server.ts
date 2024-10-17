@@ -1,7 +1,9 @@
 import * as path from 'path';
 import express from 'express';
 import { connectToMongoDB } from './Mongo/index.js';
-import config from './config.js';
+import config from './config/config.js';
+import { runExample } from './Embeddings/main.js';
+import { extractMediaMetadata } from './main.js';
 
 
 const app = express();
@@ -21,9 +23,13 @@ const init = async () => {
 const start = async () => {
   await init();
 
+
   const port = config.PORT;
   app.listen(port, () => {
     console.log(`Server listening at http://localhost:${port}`);
   });
+
+  extractMediaMetadata();
 }
 
+start();

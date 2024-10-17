@@ -1,5 +1,6 @@
 import mongoose from 'mongoose';
-import config from '../config.js';
+import config from '../config/config.js';
+import MediaModel from './Schemas/Media.js';
 
 
 
@@ -38,4 +39,8 @@ export const connectToMongoDB = async (): Promise<void> => {
         // Exit the application if the initial connection fails
         process.exit(1);
     }
+}
+
+export default {
+  media: MediaModel
 }

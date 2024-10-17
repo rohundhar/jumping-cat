@@ -10,7 +10,7 @@ let driveService: drive_v3.Drive;
 
 export const BUCKET_NAME = 'jumping-cat';
 
-export const getGDriveService = async (): Promise<drive_v3.Drive | undefined> => {
+export const getGDriveService = async (): Promise<drive_v3.Drive> => {
 
   if (driveService) {
     return driveService;
@@ -18,7 +18,7 @@ export const getGDriveService = async (): Promise<drive_v3.Drive | undefined> =>
 
   try {
       const auth = new google.auth.GoogleAuth({
-        keyFilename: './TaggingService/safari-private-key.json', // Same service account key file
+        keyFilename: './config/safari-private-key.json', // Same service account key file
         scopes: SCOPES,
       });
 
@@ -31,11 +31,13 @@ export const getGDriveService = async (): Promise<drive_v3.Drive | undefined> =>
         scopes: SCOPES,
       });
 
+      console.log(authClient);
+
   
       driveService = google.drive({ version: 'v3', auth: jwtClient });
       return driveService;
   } catch (error) {
       console.error('Error authenticating with Google Drive:', error);
-      return undefined;
+      throw error;
   }
 }

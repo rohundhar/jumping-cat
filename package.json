@@ -6,10 +6,10 @@
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "drive": "npx tsc && node dist/main.js",
+    "start": "npx tsc && node dist/server.js",
     "image": "npx tsc && node dist/TaggingService/main.js",
     "faceTrain": "npx tsc && node dist/FaceTrainingService/main.js",
     "embed": "npx tsc && node dist/Embeddings/main.js",
-    "web": "npx tsc && node dist/web/web.js",
     "clean": "rm -rf dist/"
   },
   "author": "",
@@ -25,6 +25,7 @@
     "canvas": "^2.11.2",
     "cli-progress": "^3.12.0",
     "dotenv": "^16.4.5",
+    "exifr": "^7.1.3",
     "express": "^4.21.1",
     "face-api.js": "^0.22.2",
     "fs": "^0.0.1-security",

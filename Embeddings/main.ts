@@ -6,11 +6,8 @@ async function generateEmbeddings(texts: string[]): Promise<number[][]> {
     return output.tolist();
 }
 
-
-async function runExample() {
+export const runExample = async () => {
     const tags = ['action movie', 'comedy film', 'romantic story'];
     const embeddings = await generateEmbeddings(tags);
     console.log(embeddings);
 }
-
-runExample();
