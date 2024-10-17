@@ -1,10 +1,9 @@
 import * as fs from 'fs';
 import * as faceapi from 'face-api.js';
 import canvas from 'canvas';
-import { getFaceMatcher } from './FaceTrainingService/main';
-import { getFolder, getOrUploadManyVideos, getOrUploadVideo } from './GDrive/files';
-import { MimeType } from './GDrive/types';
-import { analyzeVideo } from './TaggingService/main';
+import { getFaceMatcher } from './FaceTrainingService/main.js';
+import { getFolder, getOrUploadManyVideos, getOrUploadVideo } from './GDrive/files.js';
+import { MimeType } from './GDrive/types.js';
 import { drive_v3 } from 'googleapis';
 
 const main = async () => {

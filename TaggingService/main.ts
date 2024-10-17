@@ -2,7 +2,7 @@ import * as vision from '@google-cloud/vision';
 import { VideoIntelligenceServiceClient } from '@google-cloud/video-intelligence';
 import { drive_v3, google } from 'googleapis';
 import * as fs from 'fs/promises'; // For file system access
-import { getGDriveService } from '../GDrive/auth';
+import { getGDriveService } from '../GDrive/auth.js';
 
 // Set up Google Cloud Vision client
 const client = new vision.ImageAnnotatorClient({

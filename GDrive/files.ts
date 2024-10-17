@@ -3,7 +3,7 @@ import { Storage } from '@google-cloud/storage';
 import { drive_v3 } from 'googleapis';
 import cliProgress from 'cli-progress';
 import pLimit from 'p-limit';
-import { BUCKET_NAME, getGDriveService } from './auth';
+import { BUCKET_NAME, getGDriveService } from './auth.js';
 
 
 const storage = new Storage({

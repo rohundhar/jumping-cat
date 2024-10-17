@@ -1,7 +1,7 @@
 import * as faceapi from 'face-api.js';
 import * as fs from 'fs';
 import pLimit from 'p-limit';
-import { getTrainingData } from './helper';
+import { getTrainingData } from './helper.js';
 import canvas from 'canvas';
 import cliProgress from 'cli-progress';
 
