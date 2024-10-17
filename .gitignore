@@ -1,10 +1,11 @@
-**/node_modules
-./TaggingService/safari-private-key.json
-./token.json
 ./node_modules
-**/dist/
-./dist/
+dist/
 
-*DS_Store
-Assets/.DS_Store
+
+package-lock.json
+token.json
+safari-private-key.json
+.DS_Store
+
 *.js
+.env
