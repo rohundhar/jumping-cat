@@ -24,7 +24,6 @@ async function loadModels() {
 }
 
 
-
 // Generate labeled face descriptors
 async function generateLabeledFaceDescriptors(imagePathsByLabel: { [label: string]: string[] }): 
 Promise<{labeledFaceDescriptors: faceapi.LabeledFaceDescriptors[], rawLabeledFaceDescriptors: {label: string, descriptors: Float32Array[]}[]}> {
@@ -116,44 +115,6 @@ async function loadSavedModel(): Promise<faceapi.LabeledFaceDescriptors[] | unde
       return undefined;
   }
 }
-
-// // Load the saved labeled descriptors
-// async function loadSavedModel(): Promise<faceapi.LabeledFaceDescriptors[] | undefined> {
-//     try {
-
-//         const savedData = JSON.parse(await fs.promises.readFile(`${modelSavePath}/faceMatcher.json`, 'utf8'));
-
-
-//         const parsedData: {label: string, descriptors: Float32Array[]}[] = savedData.map((data: {label: string, descriptors: Record<string,Float32Array>[]})  => {
-//             const allDescriptors: Float32Array[] = [];
-
-//             if (data.descriptors) {
-//                 for (const descriptorArray of data.descriptors) {
-//                   const floatArray: Float32Array[] = [];
-
-//                   for (const [key, value] of Object.entries(descriptorArray)) {
-//                     floatArray[Number(key)] = new Float32Array(value);
-//                     // console.log(`${key}: ${value}`);
-//                   }
-//                   allDescriptors.push(...floatArray);
-//                 }
-//             }
-//             console.log(`Found ${allDescriptors.length} descriptors for ${data.label}`);
-//             return {
-//                 label: data.label,
-//                 descriptors: allDescriptors
-//             }           
-//         })
-
-//         return parsedData.map((rawLabelFaceDescriptor:  {label: string, descriptors: Float32Array[]}) => {
-//             const { label, descriptors } = rawLabelFaceDescriptor;
-//             return new faceapi.LabeledFaceDescriptors(label, descriptors)
-//         });
-
-//     } catch (error) {
-//         console.log(`Error while retrieving existing model descriptors: ${error}`)
-//     }
-// }
 
 
 // Main function to run the training process

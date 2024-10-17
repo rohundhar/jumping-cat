@@ -26,109 +26,53 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-const fs = __importStar(require("fs"));
-const auth_1 = __importDefault(require("./auth"));
-async function main() {
-    const service = await (0, auth_1.default)();
-    console.log('service', service);
-    if (service) {
-        const results = await service.files.list({
-            pageSize: 10,
-            fields: 'nextPageToken, files(id, name, mimeType)',
-        });
-        const items = results.data.files;
-        if (items) {
-            for (const item of items) {
-                console.log(item.name, item.id);
-            }
-        }
-    }
-}
-const getChildrenOfFolder = async (folderId) => {
-    const service = await (0, auth_1.default)();
-    if (service) {
-        const results = await service.files.list({
-            q: `'${folderId}' in parents`,
-            pageSize: 10,
-            fields: 'nextPageToken, files(id, name, mimeType, webContentLink)',
-        });
-        const items = results.data.files;
-        console.log('NextPageToken', results.data);
-        if (items) {
-            for (const item of items) {
-                console.log(item.name, item.id, item);
-            }
-        }
-    }
-};
-async function downloadFile(driveService, fileId, filePath) {
-    try {
-        const res = await driveService.files.get({ fileId, alt: 'media' }, { responseType: 'stream' });
-        res.data.pipe(fs.createWriteStream(filePath));
-        console.log(`File downloaded to ${filePath}`);
-    }
-    catch (error) {
-        console.error('Error downloading file:', error);
-    }
-}
-const getAllFilesInFolder = async (driveService, folderId) => {
-    let allFiles = [];
-    let pageToken = undefined;
-    let res;
-    do {
-        res = await driveService.files.list({
-            q: `'${folderId}' in parents`,
-            fields: 'nextPageToken, files(id, name, mimeType, webContentLink, webViewLink, thumbnailLink)',
-            pageToken: pageToken, // Include the pageToken for subsequent pages
-            pageSize: 1000 // Optional: Set a larger page size (max 1000) for fewer requests
-        });
-        // If any of these files are folders, then we need to get all files within THAT FOLDER
-        const promises = [];
-        const mediaFiles = [];
-        res.data.files?.forEach((file) => {
-            if (file.id && file.mimeType === 'application/vnd.google-apps.folder') {
-                promises.push(getAllFilesInFolder(driveService, file.id));
-            }
-            else {
-                mediaFiles.push(file);
-            }
-        });
-        let results;
-        if (promises.length > 0) {
-            results = await Promise.all(promises);
-            allFiles = allFiles.concat(mediaFiles, ...results);
-        }
-        else {
-            console.log(`We found all ${mediaFiles.length} files at the leaf`);
-            allFiles = allFiles.concat(mediaFiles);
-        }
-        pageToken = res.data.nextPageToken; // Update the pageToken for the next iteration
-    } while (pageToken); // Continue as long as there's a nextPageToken
-    return allFiles;
-};
-async function getFolder() {
-    const driveService = await (0, auth_1.default)();
-    if (!driveService) {
-        return;
-    }
-    // Find the folder with the specified name
+const faceapi = __importStar(require("face-api.js"));
+const canvas_1 = __importDefault(require("canvas"));
+const main_1 = require("./FaceTrainingService/main");
+const files_1 = require("./GDrive/files");
+const types_1 = require("./GDrive/types");
+const main = async () => {
     const folderName = 'Safari 2024';
-    const folders = await driveService.files.list({
-        q: `name='${folderName}' and mimeType='application/vnd.google-apps.folder'`,
-        fields: 'nextPageToken, files(id, name)',
-    });
-    if (folders.data.files) {
-        if (folders.data.files.length === 0) {
-            console.log(`Folder not found: ${folderName}`);
-            return;
-        }
-        const folderId = folders.data.files[0].id;
-        if (folderId) {
-            console.log(`Folder found: ${folderName} (ID: ${folderId})`);
-            const allFiles = await getAllFilesInFolder(driveService, folderId);
-            console.log("All Files", allFiles.length);
-            console.log('Some Files', allFiles.slice(0, 10));
+    const allFilesInDrive = await (0, files_1.getFolder)(folderName);
+    const videos = [];
+    for (const file of allFilesInDrive) {
+        switch (file.mimeType) {
+            case types_1.MimeType.MP4:
+            case types_1.MimeType.QUICKTIME: {
+                if (file.id) {
+                    videos.push(file);
+                }
+                break;
+            }
+            case types_1.MimeType.HEIC: {
+                // console.log('convert to jpg stream?')
+                break;
+            }
+            case types_1.MimeType.JPG:
+            case types_1.MimeType.PNG: {
+                // console.log('handle image normally');
+                break;
+            }
+            default: {
+                console.log('Unknown File Type', file.mimeType);
+            }
         }
     }
-}
-getFolder();
+    await (0, files_1.getOrUploadManyVideos)(videos);
+};
+const recognize = async () => {
+    const url = `Assets/Testing/GroupPhoto2.jpg`;
+    const faceMatcher = await (0, main_1.getFaceMatcher)();
+    try {
+        const img = await canvas_1.default.loadImage(url);
+        const queryDetections = await faceapi.detectAllFaces(img).withFaceLandmarks().withFaceDescriptors();
+        for (const detection of queryDetections) {
+            const bestMatch = faceMatcher.findBestMatch(detection.descriptor);
+            console.log(`Best match: ${bestMatch.label} (confidence: ${bestMatch.distance})`);
+        }
+    }
+    catch (err) {
+        console.log('Error while trying to detect Image', url, err);
+    }
+};
+main();

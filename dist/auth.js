@@ -30,13 +30,14 @@ const googleapis_1 = require("googleapis");
 const fs = __importStar(require("fs"));
 const path = __importStar(require("path"));
 const readline_1 = __importDefault(require("readline"));
+const dirName = `/Users/rohundhar/Desktop/Projects/jumping-cat`;
 const SCOPES = [
     'https://www.googleapis.com/auth/drive.metadata.readonly',
     'https://www.googleapis.com/auth/drive.readonly'
 ];
 const getGDriveService = async () => {
-    const credentialsPath = path.join(__dirname, 'credentials.json');
-    const tokenPath = path.join(__dirname, 'token.json');
+    const credentialsPath = path.join(dirName, 'credentials.json');
+    const tokenPath = path.join(dirName, 'token.json');
     let credentials = JSON.parse(fs.readFileSync(credentialsPath, 'utf8'));
     let token = fs.existsSync(tokenPath) ? JSON.parse(fs.readFileSync(tokenPath, 'utf8')) : null;
     // token = '4/0AVG7fiRizM3ABVDN5N1EbbVf395aJUgWRW9JI6s3RUdACv4pTEf2D6GV-q1lSYkUiU6N6A';

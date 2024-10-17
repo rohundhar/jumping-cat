@@ -22,21 +22,17 @@ var __importStar = (this && this.__importStar) || function (mod) {
     __setModuleDefault(result, mod);
     return result;
 };
-var __importDefault = (this && this.__importDefault) || function (mod) {
-    return (mod && mod.__esModule) ? mod : { "default": mod };
-};
 Object.defineProperty(exports, "__esModule", { value: true });
+exports.tagImageBuffer = exports.analyzeVideo = void 0;
 const vision = __importStar(require("@google-cloud/vision"));
-const googleapis_1 = require("googleapis");
-const auth_1 = __importDefault(require("../auth"));
+const video_intelligence_1 = require("@google-cloud/video-intelligence");
+const auth_1 = require("../GDrive/auth");
 // Set up Google Cloud Vision client
 const client = new vision.ImageAnnotatorClient({
     keyFilename: './TaggingService/safari-private-key.json', // Path to your service account key file
 });
-// Set up Google Drive API client
-const auth = new googleapis_1.google.auth.GoogleAuth({
-    keyFilename: './TaggingService/safari-private-key.json', // Same service account key file
-    scopes: ['https://www.googleapis.com/auth/drive.readonly'],
+const videoClient = new video_intelligence_1.VideoIntelligenceServiceClient({
+    keyFilename: './TaggingService/safari-private-key.json', // Path to your service account key file
 });
 async function get_image_content_from_drive(service, fileId) {
     try {
@@ -48,9 +44,69 @@ async function get_image_content_from_drive(service, fileId) {
         throw error; // Re-throw the error for handling in the calling function
     }
 }
+const analyzeVideo = async (gcsUri) => {
+    const features = ['LABEL_DETECTION'];
+    const tagResults = [];
+    const request = {
+        inputUri: gcsUri,
+        features: features,
+    };
+    try {
+        const [operation] = await videoClient.annotateVideo(request);
+        console.log('Waiting for operation to complete...');
+        // Poll for operation completion (recommended for longer videos)
+        const [operationResult] = await operation.promise();
+        console.log('Operation Result', operationResult, operationResult.annotationResults);
+        if (operationResult.annotationResults) {
+            const annotationResults = operationResult.annotationResults[0];
+            // Process the results
+            if (annotationResults.segmentLabelAnnotations) {
+                for (const annotation of annotationResults.segmentLabelAnnotations) {
+                    console.log(`Label: ${annotation.entity?.description}`);
+                    if (annotation.entity?.description) {
+                        tagResults.push(annotation.entity?.description);
+                    }
+                    if (annotation.segments) {
+                        for (const segment of annotation.segments) {
+                            const startTime = segment.segment?.startTimeOffset;
+                            const endTime = segment.segment?.endTimeOffset;
+                            console.log(`  Segment: ${startTime?.seconds}.${startTime?.nanos}s to ${endTime?.seconds}.${endTime?.nanos}s`);
+                        }
+                    }
+                }
+            }
+            else {
+                console.log('No segment label annotations found.');
+            }
+        }
+    }
+    catch (error) {
+        console.error('Error analyzing video:', error);
+    }
+    return tagResults;
+};
+exports.analyzeVideo = analyzeVideo;
+const tagImageBuffer = async (img) => {
+    const results = [];
+    const { content, id } = img;
+    try {
+        const request = {
+            image: { content },
+        };
+        const [response] = await client.labelDetection(request);
+        const labels = response.labelAnnotations?.map((label) => label.description) || [];
+        results.push({ tags: labels });
+    }
+    catch (error) {
+        console.error(`Error processing ${id}: ${error.message}`);
+        results.push({ tags: [] });
+    }
+    return results;
+};
+exports.tagImageBuffer = tagImageBuffer;
 async function batchTagImages(imageInfos) {
     const results = [];
-    const driveService = await (0, auth_1.default)();
+    const driveService = await (0, auth_1.getGDriveService)();
     if (!driveService) {
         return results;
     }
@@ -76,12 +132,14 @@ const imageInfos = [
     { id: '1ofduUI0JYY7VzfmfJ_0EsfGvB5dQQGzO', url: 'https://drive.google.com/uc?id=1ofduUI0JYY7VzfmfJ_0EsfGvB5dQQGzO&export=download' },
     { id: '1BMNd-RDmdmH6HcUq3ZO4MJVcy9Ab6BAw', url: 'https://drive.google.com/uc?id=1BMNd-RDmdmH6HcUq3ZO4MJVcy9Ab6BAw&export=download' },
 ];
-batchTagImages(imageInfos)
-    .then((taggedImages) => {
-    for (const imageData of taggedImages) {
-        console.log(`Image: ${imageData.imageUrl}, Tags: ${imageData.tags}`);
-    }
-})
-    .catch((error) => {
-    console.error('Overall error:', error);
-});
+const main = () => {
+    batchTagImages(imageInfos)
+        .then((taggedImages) => {
+        for (const imageData of taggedImages) {
+            console.log(`Image: ${imageData.imageUrl}, Tags: ${imageData.tags}`);
+        }
+    })
+        .catch((error) => {
+        console.error('Overall error:', error);
+    });
+};

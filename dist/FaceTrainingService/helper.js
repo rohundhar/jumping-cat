@@ -48,12 +48,12 @@ async function prepareTrainingData(assetsDir) {
     }
 }
 async function getTrainingData() {
-    const assetsDirectory = '../Assets'; // Replace with your actual assets directory
+    const assetsDirectory = './Assets'; // Replace with your actual assets directory
     const imagePathsByLabel = await prepareTrainingData(assetsDirectory);
     if (Object.keys(imagePathsByLabel).length === 0) {
         console.error("No training data found. Exiting.");
         return {};
     }
-    console.log('Prepared training data:', imagePathsByLabel); // You can now use this data in your face training module
+    // console.log('Prepared training data:', imagePathsByLabel); // You can now use this data in your face training module
     return imagePathsByLabel;
 }
