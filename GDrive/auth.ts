@@ -31,8 +31,6 @@ export const getGDriveService = async (): Promise<drive_v3.Drive> => {
         scopes: SCOPES,
       });
 
-      console.log(authClient);
-
   
       driveService = google.drive({ version: 'v3', auth: jwtClient });
       return driveService;

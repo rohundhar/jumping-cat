@@ -1,3 +1,4 @@
+import cliProgress from 'cli-progress';
 import * as fs from 'fs';
 import * as faceapi from 'face-api.js';
 import exifr from 'exifr';
@@ -10,42 +11,49 @@ import pLimit from 'p-limit';
 
 const folderName = 'Safari 2024';
 
+const imagetypes = [MimeType.JPG];
+
 export const extractMediaMetadata = async () => {
   const allFilesInDrive = await getFolder(folderName);
 
-  const limit = pLimit(5);
+  const limit = pLimit(10);
 
-  const allFiles = allFilesInDrive.slice(0,10);
+  const allFiles = allFilesInDrive.filter(file => imagetypes.includes(file.mimeType as MimeType));
+
+  const exampleByModel: any = {};
+
+
+  const bar = new cliProgress.SingleBar({}, cliProgress.Presets.shades_classic);
+
+  bar.start(allFiles.length, 0);
+
+  const errors: any[] = [];
 
   await Promise.all(allFiles.map(async (file) => {
       await limit(async () => { // Wrap the processing function with limit
         try {
-          switch (file.mimeType as MimeType) {
-            case MimeType.MP4:
-            case MimeType.QUICKTIME: {
-              break;
-            }
-            case MimeType.HEIC:
-            case MimeType.JPG:
-            case MimeType.PNG: {
-              if (file.id) {
-                const media = await getImageContent(file.id)
-                const metadata = await exifr.parse(media);
-                console.log('Parsed Media', metadata);
-              }
-              break;
-            }
-            default: {
-              console.log('Unknown File Type', file.mimeType);
+          if (file.id) {
+            const media = await getImageContent(file.id)
+            const metadata = await exifr.parse(media);
+            const key = `${metadata.Make}:${metadata.Model}`;
+            if (!exampleByModel[key]) {
+              exampleByModel[key] = metadata;
+              exampleByModel[key].name = file.name;
             }
           }
         } catch (error) {
-            console.error(`Error processing ${file.name}:`, error);
+            errors.push(`Error processing ${file.name}:`)
+            // console.error(`Error processing ${file.name}:${file.mimeType}`, error);
         } finally { // Ensure progress bar updates even on error
+          bar.increment();
         }
       });
     }));
 
+    console.log(exampleByModel);
+    console.log(Object.keys(exampleByModel));
+    console.log(errors);
+    bar.stop();
 
 }
 

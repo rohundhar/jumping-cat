@@ -1,11 +1,12 @@
 import mongoose, { Schema, Model, Document } from 'mongoose';
 import { BaseSchema } from './BaseSchema.js';
 import { MimeType } from '../../GDrive/types.js';
-import { MediaType } from '../types.js';
+import { ImageMetadata, MediaType } from '../types.js';
 
 export interface Media extends BaseSchema, Document { // Add Document interface
     gDriveId: string;
-    fileMetadata: Record<string, any>;
+    gDriveFilename: string;
+    fileMetadata: ImageMetadata;
     facialRecognitionTags: string[];
     googleVisionTags: string[];
     customTags: string[];
@@ -22,6 +23,9 @@ const MediaSchema = new Schema<Media, MediaModel>({
       type: String,
       required: true, // Make gDriveId required
       unique: true // Ensure gDriveIds are unique
+  },
+  gDriveFilename: {
+    type: String,
   },
   fileMetadata: {
       type: Schema.Types.Mixed
