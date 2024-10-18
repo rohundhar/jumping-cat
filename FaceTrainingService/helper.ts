@@ -1,5 +1,9 @@
 import * as fs from 'fs/promises'; // Use fs.promises for async file operations
+import * as faceapi from 'face-api.js';
 import * as path from 'path';
+import canvas from 'canvas';
+import { getFaceMatcher } from './main.js';
+import { TaggableImage } from '../TaggingService/types.js';
 
 async function prepareTrainingData(assetsDir: string): Promise<{ [label: string]: string[] }> {
     const trainingData: { [label: string]: string[] } = {};
@@ -41,3 +45,22 @@ export async function getTrainingData() {
     return imagePathsByLabel;
 
 }
+
+export const extractFacialRecognitionTags = async (img: TaggableImage) => {
+  
+    const { content, id, name } = img;
+
+    const faceMatcher = await getFaceMatcher();
+  
+    try {
+      const img = await canvas.loadImage(content);
+      const queryDetections = await faceapi.detectAllFaces(img as any).withFaceLandmarks().withFaceDescriptors();
+    
+      for (const detection of queryDetections) {
+          const bestMatch = faceMatcher.findBestMatch(detection.descriptor!);
+          console.log(`Best match: ${bestMatch.label} (confidence: ${bestMatch.distance})`);
+      }
+    } catch (err) {
+      console.log(`Error while trying to detect faces for ${name} - ${id}`, err);
+    }
+  }

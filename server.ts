@@ -3,7 +3,7 @@ import express from 'express';
 import { connectToMongoDB } from './Mongo/index.js';
 import config from './config/config.js';
 import { runExample } from './Embeddings/main.js';
-import { extractMediaMetadata } from './main.js';
+import { extractMediaMetadata, setupMongoDocs } from './main.js';
 
 
 const app = express();
@@ -30,6 +30,7 @@ const start = async () => {
   });
 
   extractMediaMetadata();
+  setupMongoDocs();
 }
 
 start();

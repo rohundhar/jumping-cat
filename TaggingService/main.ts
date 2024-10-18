@@ -3,6 +3,7 @@ import { VideoIntelligenceServiceClient } from '@google-cloud/video-intelligence
 import { drive_v3, google } from 'googleapis';
 import * as fs from 'fs/promises'; // For file system access
 import { getGDriveService } from '../GDrive/auth.js';
+import { TaggableImage } from './types.js';
 
 // Set up Google Cloud Vision client
 const client = new vision.ImageAnnotatorClient({
@@ -79,27 +80,6 @@ export const analyzeVideo = async (gcsUri: string): Promise<string[]> => {
   return tagResults;
 }
 
-export const tagImageBuffer = async (img: { content: Buffer, id: string }) => {
-  const results: any[] = [];
-
-  const { content, id } = img;
-  try {
-
-      const request = {
-          image: { content },
-      };
-
-      const [response] = await client.labelDetection(request);
-      const labels = response.labelAnnotations?.map((label) => label.description) || [];
-      results.push({ tags: labels });
-  } catch (error: any) {
-      console.error(`Error processing ${id}: ${error.message}`);
-      results.push({ tags: [] });
-  }
-
-  return results;
-}
-
 async function batchTagImages(imageInfos: { id: string; url: string }[]): Promise<any[]> {
     const results: any[] = [];
 
@@ -128,22 +108,19 @@ async function batchTagImages(imageInfos: { id: string; url: string }[]): Promis
     return results;
 }
 
-
-// Example usage
-const imageInfos = [
-    { id: '1ofduUI0JYY7VzfmfJ_0EsfGvB5dQQGzO', url: 'https://drive.google.com/uc?id=1ofduUI0JYY7VzfmfJ_0EsfGvB5dQQGzO&export=download' },
-    { id: '1BMNd-RDmdmH6HcUq3ZO4MJVcy9Ab6BAw', url: 'https://drive.google.com/uc?id=1BMNd-RDmdmH6HcUq3ZO4MJVcy9Ab6BAw&export=download' },
-];
-
-
-const main = () => {
-    batchTagImages(imageInfos)
-    .then((taggedImages) => {
-        for (const imageData of taggedImages) {
-            console.log(`Image: ${imageData.imageUrl}, Tags: ${imageData.tags}`);
-        }
-    })
-    .catch((error) => {
-        console.error('Overall error:', error);
-    });
-}
+export const extractVisionTags = async (img: TaggableImage) => {
+    const { content, id } = img;
+    try {
+  
+        const request = {
+            image: { content },
+        };
+  
+        const [response] = await client.labelDetection(request);
+        const labels = response.labelAnnotations?.map((label) => label.description) || [];
+        return labels;
+    } catch (error: any) {
+        console.error(`Error processing ${id}: ${error.message}`);
+        return [];
+    }
+  }

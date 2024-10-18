@@ -4,6 +4,7 @@ import { drive_v3 } from 'googleapis';
 import cliProgress from 'cli-progress';
 import pLimit from 'p-limit';
 import { BUCKET_NAME, getGDriveService } from './auth.js';
+import { MimeType } from './types.js';
 
 
 const storage = new Storage({
@@ -119,7 +120,11 @@ const getVideoFileName = (fileId: string) => {
 }
 
 
+const videoTypes = [MimeType.QUICKTIME, MimeType.MP4];
+
 export const getOrUploadManyVideos = async (files: drive_v3.Schema$File[]): Promise<any> => {
+
+  const videos = files.filter((file) => videoTypes.includes(file.mimeType as MimeType));
 
   const limit = pLimit(5);
 
@@ -130,10 +135,10 @@ export const getOrUploadManyVideos = async (files: drive_v3.Schema$File[]): Prom
   }, cliProgress.Presets.shades_grey);
 
 
-  const bar = multibar.create(files.length, 0);
-  bar.start(files.length, 0);
+  const bar = multibar.create(videos.length, 0);
+  bar.start(videos.length, 0);
 
-  const promises = files.map((file) => {
+  const promises = videos.map((file) => {
       return limit(async () => {
 
         if (file.id) {

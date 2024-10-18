@@ -4,16 +4,22 @@ import { MimeType } from '../../GDrive/types.js';
 import { ImageMetadata, MediaType } from '../types.js';
 
 export interface Media extends BaseSchema, Document { // Add Document interface
-    gDriveId: string;
-    gDriveFilename: string;
-    fileMetadata: ImageMetadata;
-    facialRecognitionTags: string[];
-    googleVisionTags: string[];
-    customTags: string[];
-    thumbnailLink: string;
-    webContentLink: string;
-    mimeType: MimeType;
-    tag_embeddings: number[][];
+
+  // Extract from drive file
+  gDriveId: string;
+  gDriveFilename: string;
+  mimeType?: MimeType;
+  thumbnailLink?: string;
+  webContentLink?: string;
+
+  // Extract custom from various functions
+  fileMetadata?: ImageMetadata;
+  facialRecognitionTags: string[];
+  googleVisionTags: string[];
+  customTags: string[];
+
+
+  tag_embeddings?: number[][];
 }
 
 export interface MediaModel extends Model<Media> {}
@@ -25,14 +31,24 @@ const MediaSchema = new Schema<Media, MediaModel>({
       unique: true // Ensure gDriveIds are unique
   },
   gDriveFilename: {
+    required: true,
     type: String,
   },
   fileMetadata: {
       type: Schema.Types.Mixed
   },
-  facialRecognitionTags: [String], 
-  googleVisionTags: [String],     
-  customTags: [String],           
+  facialRecognitionTags: {
+    type: [String],
+    default: []
+  },
+  googleVisionTags: {
+    type: [String],
+    default: []
+  },   
+  customTags: {
+    type: [String],
+    default: []
+  },
   thumbnailLink: {
       type: String
   },
@@ -43,7 +59,11 @@ const MediaSchema = new Schema<Media, MediaModel>({
       type: String
   },
   tag_embeddings: [[Number]],
-  createdAt: { type: Date, default: Date.now }, 
+  createdAt: { 
+    type: Date, 
+    default: Date.now,
+    required: true
+  }, 
   updatedAt: {
       type: Date,
       default: Date.now,
