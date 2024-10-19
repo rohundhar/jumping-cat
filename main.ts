@@ -3,58 +3,133 @@ import * as fs from 'fs';
 import * as faceapi from 'face-api.js';
 import exifr from 'exifr';
 import canvas from 'canvas';
+import convert from 'heic-convert';
 import { getFaceMatcher } from './FaceTrainingService/main.js';
-import { getFolder, getImageContent, getOrUploadManyVideos, getOrUploadVideo } from './GDrive/files.js';
+import { getFolder, getImageContent, getOrUploadVideo } from './GDrive/files.js';
 import { MimeType } from './GDrive/types.js';
 import { drive_v3 } from 'googleapis';
 import pLimit from 'p-limit';
-import { getOrCreateMedia } from './Mongo/Helpers/media.js';
+import { getAllMedia, getAllMediaMongo, getOrCreateMedia } from './Mongo/Helpers/media.js';
+import { extractImageMetadataTags } from './TaggingService/metadataTags.js';
+import { analyzeVideo, extractVisionTags } from './TaggingService/main.js';
+import { request } from 'http';
 
 const folderName = 'Safari 2024';
 
 const imagetypes = [MimeType.JPG];
 
-export const extractMediaMetadata = async () => {
-  const allFilesInDrive = await getFolder(folderName);
+export const extractAndUploadImageVisionTags = async () => {
+
+  const {
+    allImages
+  } = await getAllMediaMongo();
+
+
+  console.log(`Found ${allImages.length} pieces of media`);
+
+  const bar = new cliProgress.SingleBar({}, cliProgress.Presets.rect);
+
+  bar.start(allImages.length, 0);
 
   const limit = pLimit(10);
 
-  const allFiles = allFilesInDrive.slice(0,10);
-
-  const exampleByModel: any = {};
-
-
-  const bar = new cliProgress.SingleBar({}, cliProgress.Presets.shades_classic);
-
-  bar.start(allFiles.length, 0);
-
-  const errors: any[] = [];
-
-  await Promise.all(allFiles.map(async (file) => {
+  await Promise.all(allImages.map(async (media) => {
       await limit(async () => { // Wrap the processing function with limit
         try {
-          if (file.id) {
-            const media = await getImageContent(file.id)
-            const metadata = await exifr.parse(media);
-            const key = `${metadata.Make}:${metadata.Model}`;
-            if (!exampleByModel[key]) {
-              exampleByModel[key] = metadata;
-              exampleByModel[key].name = file.name;
+          if (media.googleVisionTags.length === 0 ) {
+            let content = await getImageContent(media.gDriveId);
+            if (media.mimeType === MimeType.HEIC) {
+              content = Buffer.from(await convert({
+                buffer: content,
+                format: 'JPEG',
+                quality: 1
+              }));
             }
+            const tags = await extractVisionTags({
+              id: media.gDriveId,
+              name: media.gDriveFilename,
+              content
+            });
+            media.googleVisionTags = tags;
+            await media.save();
           }
         } catch (error) {
-            errors.push(`Error processing ${file.name}:`)
-            // console.error(`Error processing ${file.name}:${file.mimeType}`, error);
+            console.error(`Error processing ${media.gDriveFilename}:${media.mimeType}`, error);
         } finally { // Ensure progress bar updates even on error
           bar.increment();
         }
       });
     }));
 
-    console.log(exampleByModel);
-    console.log(Object.keys(exampleByModel));
-    console.log(errors);
     bar.stop();
+
+}
+
+
+const REQUESTS_PER_MINUTE = 2;
+const MILLISECONDS_PER_MINUTE = 60000;
+const CONCURRENCY_LIMIT = 2;
+
+export const annotateVideoTags = async () => {
+
+  const {
+    allVideos
+  } = await getAllMediaMongo();
+
+
+  console.log(`Found ${allVideos.length} pieces of media`);
+
+  const multibar = new cliProgress.MultiBar({
+    clearOnComplete: true,
+    hideCursor: true,
+    format: ' {bar} | {eta_formatted} | elapsed: {timepass} s | {percentage}% | {value}/{total}',
+}, cliProgress.Presets.shades_grey);
+
+
+  const bar = multibar.create(allVideos.length, 0);
+
+  bar.start(allVideos.length, 0);
+
+  const limit = pLimit(CONCURRENCY_LIMIT);
+
+
+  const startTime = Date.now();
+  let requestCount = 0;
+
+  await Promise.all(allVideos.map(async (media) => {
+      await limit(async () => { // Wrap the processing function with limit
+        try {
+          const key = await getOrUploadVideo(media, multibar);
+          if (key) {
+            const elapsedTime = Date.now() - startTime;
+            const expectedRequestCount = (elapsedTime / MILLISECONDS_PER_MINUTE) * REQUESTS_PER_MINUTE;
+
+            if (requestCount > expectedRequestCount) {
+              const delay = (requestCount - expectedRequestCount) * (MILLISECONDS_PER_MINUTE / REQUESTS_PER_MINUTE);
+              await new Promise(resolve => setTimeout(resolve, delay));
+            }
+
+            requestCount++;
+            const tags = await analyzeVideo(key);
+            media.googleVisionTags = tags;
+            await media.save();
+          }
+        } catch (error: any) {
+          if (error?.reason === 'RATE_LIMIT_EXCEEDED') {
+            console.log('RATE LIMIT EXCEEDED. waiting before trying again');
+            await new Promise(resolve => setTimeout(resolve, MILLISECONDS_PER_MINUTE));
+          } else {
+            console.error(`Error processing ${media.gDriveFilename}:${media.mimeType}`, error);
+          }
+        } finally { // Ensure progress bar updates even on error
+          bar.update({ timepass: ((Date.now() - startTime) / 1000).toFixed(0)});
+          bar.increment();
+        }
+      });
+    }));
+
+    bar.stop();
+    multibar.stop()
 
 }
 
@@ -65,7 +140,7 @@ export const setupMongoDocs = async () => {
 
   const bar = new cliProgress.SingleBar({}, cliProgress.Presets.shades_classic);
 
-  const allFiles = allFilesInDrive.slice(0,10);
+  const allFiles = allFilesInDrive;
 
   bar.start(allFiles.length, 0);
 
@@ -75,7 +150,7 @@ export const setupMongoDocs = async () => {
       try {
         if (file.id) {
           const media = getOrCreateMedia(file);
-        }
+        } 
       } catch (error) {
           console.error(`Error processing ${file.name}:${file.mimeType}`, error);
       } finally { // Ensure progress bar updates even on error
@@ -85,28 +160,4 @@ export const setupMongoDocs = async () => {
   }));
   
   bar.stop();
-
-  // for (const file of allFilesInDrive) {
-  //      switch (file.mimeType as MimeType) {
-  //       case MimeType.MP4:
-  //       case MimeType.QUICKTIME: {
-  //         // Analyze Video 
-  //         // Custom Tags
-  //       }
-  //       case MimeType.HEIC: 
-  //       case MimeType.JPG:
-  //       case MimeType.PNG: {
-  //         // Convert to a buffer / taggable image
-  //         // Extract and upload metadata
-  //         // Extract and upload google vision annotation 
-  //         // Extract and upload face recognition
-  //         break;
-  //       }
-  //       default: {
-  //         console.log('Unknown File Type', file.mimeType);
-  //       }
-  //     }
-  // }
 }
-
-

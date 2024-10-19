@@ -7,11 +7,11 @@ import { TaggableImage } from './types.js';
 
 // Set up Google Cloud Vision client
 const client = new vision.ImageAnnotatorClient({
-    keyFilename: './TaggingService/safari-private-key.json', // Path to your service account key file
+    keyFilename: './config/safari-private-key.json', // Path to your service account key file
 });
 
 const videoClient = new VideoIntelligenceServiceClient({
-  keyFilename: './TaggingService/safari-private-key.json', // Path to your service account key file
+  keyFilename: './config/safari-private-key.json', // Path to your service account key file
 });
 
 
@@ -27,6 +27,8 @@ async function get_image_content_from_drive(service: drive_v3.Drive, fileId: str
 }
 
 
+const LOG_LABELS = true;
+
 export const analyzeVideo = async (gcsUri: string): Promise<string[]> => {
 
   const features: any[] = ['LABEL_DETECTION'];
@@ -39,44 +41,40 @@ export const analyzeVideo = async (gcsUri: string): Promise<string[]> => {
       features: features,
   };
 
-  try {
-      const [operation] = await videoClient.annotateVideo(request);
-      console.log('Waiting for operation to complete...');
+  const [operation] = await videoClient.annotateVideo(request);
+  if (LOG_LABELS) console.log('Waiting for operation to complete...');
 
-      // Poll for operation completion (recommended for longer videos)
-      const [operationResult] = await operation.promise();
+  // Poll for operation completion (recommended for longer videos)
+  const [operationResult] = await operation.promise();
 
-      console.log('Operation Result', operationResult, operationResult.annotationResults);
+  if (LOG_LABELS) console.log('Operation Result', operationResult, operationResult.annotationResults);
 
-      if (operationResult.annotationResults) {
-        const annotationResults = operationResult.annotationResults[0];
+  if (operationResult.annotationResults) {
+  const annotationResults = operationResult.annotationResults[0];
 
-        // Process the results
-        if (annotationResults.segmentLabelAnnotations) {
-            for (const annotation of annotationResults.segmentLabelAnnotations) {
-                console.log(`Label: ${annotation.entity?.description}`);
-                if (annotation.entity?.description) {
-                  tagResults.push(annotation.entity?.description);
-                }
-                if (annotation.segments) {
-                    for (const segment of annotation.segments) {
-                        const startTime = segment.segment?.startTimeOffset;
-                        const endTime = segment.segment?.endTimeOffset;
-                        console.log(
-                            `  Segment: ${startTime?.seconds}.${startTime?.nanos}s to ${endTime?.seconds}.${endTime?.nanos}s`
-                        );
-                    }
-                }
-            }
-        } else {
-            console.log('No segment label annotations found.');
-        }
-      }      
-
-  } catch (error) {
-      console.error('Error analyzing video:', error);
+  // Process the results
+  if (annotationResults.segmentLabelAnnotations) {
+      for (const annotation of annotationResults.segmentLabelAnnotations) {
+          if (LOG_LABELS) console.log(`Label: ${annotation.entity?.description}`);
+          if (annotation.entity?.description) {
+              tagResults.push(annotation.entity?.description);
+          }
+          if (annotation.segments) {
+              for (const segment of annotation.segments) {
+                  const startTime = segment.segment?.startTimeOffset;
+                  const endTime = segment.segment?.endTimeOffset;
+                  if (LOG_LABELS) {
+                  console.log(
+                      `  Segment: ${startTime?.seconds}.${startTime?.nanos}s to ${endTime?.seconds}.${endTime?.nanos}s`
+                  );
+                  }
+              }
+          }
+      }
+  } else {
+      // console.log('No segment label annotations found.');
   }
-
+  }      
   return tagResults;
 }
 
@@ -108,17 +106,18 @@ async function batchTagImages(imageInfos: { id: string; url: string }[]): Promis
     return results;
 }
 
-export const extractVisionTags = async (img: TaggableImage) => {
+export const extractVisionTags = async (img: TaggableImage): Promise<string[]> => {
     const { content, id } = img;
     try {
   
         const request = {
             image: { content },
+            features: [{ type: 'LABEL_DETECTION', maxResults: 20 }], // Increased maxResults
         };
   
-        const [response] = await client.labelDetection(request);
+        const [response] = await client.annotateImage(request);
         const labels = response.labelAnnotations?.map((label) => label.description) || [];
-        return labels;
+        return labels.filter(label => label !== undefined && label !== null);
     } catch (error: any) {
         console.error(`Error processing ${id}: ${error.message}`);
         return [];

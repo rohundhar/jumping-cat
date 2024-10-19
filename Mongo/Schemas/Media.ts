@@ -115,7 +115,7 @@ MediaSchema.pre<Media>('save', async function (next) {
     this.isModified('googleVisionTags')      || 
     this.isModified('customTags')) {
       const tags = computeTags(this);
-      console.log('Modify tag embeddings based on new tag list', tags);
+      // console.log('Modify tag embeddings based on new tag list', tags);
       // this.tag_embeddings = await generateEmbeddings(this.tags);
     }
     next(); 

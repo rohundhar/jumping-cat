@@ -5,11 +5,12 @@ import cliProgress from 'cli-progress';
 import pLimit from 'p-limit';
 import { BUCKET_NAME, getGDriveService } from './auth.js';
 import { MimeType } from './types.js';
+import { Media } from '../Mongo/Schemas/Media.js';
 
 
 const storage = new Storage({
   projectId: 'safari-2024',
-  keyFilename: './TaggingService/safari-private-key.json', // Same service account key file
+  keyFilename: './config/safari-private-key.json', // Same service account key file
 });
 
 async function downloadFile(driveService: any, fileId: string, filePath: string) {
@@ -122,9 +123,9 @@ const getVideoFileName = (fileId: string) => {
 
 const videoTypes = [MimeType.QUICKTIME, MimeType.MP4];
 
-export const getOrUploadManyVideos = async (files: drive_v3.Schema$File[]): Promise<any> => {
+export const getOrUploadManyVideos = async (allMedia: Media[]): Promise<any> => {
 
-  const videos = files.filter((file) => videoTypes.includes(file.mimeType as MimeType));
+  const videos = allMedia.filter((media) => videoTypes.includes(media.mimeType as MimeType));
 
   const limit = pLimit(5);
 
@@ -154,25 +155,22 @@ export const getOrUploadManyVideos = async (files: drive_v3.Schema$File[]): Prom
   multibar.stop(); // Stop the multibar after all uploads are complete
 }
 
-export const getOrUploadVideo = async (file: drive_v3.Schema$File, multiBar: cliProgress.MultiBar): Promise<string | undefined> => {
+export const getOrUploadVideo = async (file: Media, multiBar: cliProgress.MultiBar): Promise<string | undefined> => {
 
   const service = await getGDriveService();
 
-  const { id: fileId, name } = file;
+  const { gDriveId: fileId} = file;
+  
   if (!service || !fileId) {
     return undefined;
   }
 
-
   const fileName = getVideoFileName(fileId);
-
 
   const bucket = storage.bucket(BUCKET_NAME);
   const gcsFile = bucket.file(fileName); 
 
   const [exists] = await gcsFile.exists();
-
-
 
   if (!exists) {
     try {

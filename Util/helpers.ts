@@ -9,7 +9,7 @@ export function extractValidParams<K extends string>(props: { params: Record<str
     return queryParams;
   }
 
-  for (const [key, value] of params.entries()) {
+  for (const [key, value] of Object.entries(params)) {
     if (ValidKeys.includes(key as K)) {
       queryParams[key as K] = value;
     }
@@ -17,13 +17,3 @@ export function extractValidParams<K extends string>(props: { params: Record<str
 
   return queryParams;
 };
-
-export function createValidKeys<T>(): (keyof T)[] {
-  // Create a dummy object to get the keys. Setting the properties to undefined is crucial for optional properties.
-  const dummyObj: Record<keyof T, undefined> = {} as Record<keyof T, undefined>;
-  for (const key in ({} as T)) {
-    dummyObj[key] = undefined;
-  }
-  return Object.keys(dummyObj) as (keyof T)[];
-}
-

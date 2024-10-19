@@ -42,3 +42,27 @@ interface OtherImageProperties {
 
 
 export type ImageMetadata  = ImageSharedProperties & iPhoneProperties & OtherImageProperties;
+
+export const ValidImageMetadataKeys = [
+  "Make",
+  "Model",
+  "Orientation",
+  "ResolutionUnit",
+  "XResolution",
+  "YResolution",
+  "DateTimeOriginal",
+  "CreateDate",
+  "ExifImageWidth",
+  "ExifImageHeight",
+  "ISO",
+
+  "GPSLatitudeRef",
+  "GPSLatitude",
+  "GPSLongitudeRef",
+  "GPSLongitude",
+  "GPSAltitude",
+  "latitude",
+  "longitude",
+  
+  "DigitalZoomRatio"
+]

@@ -3,7 +3,7 @@ import express from 'express';
 import { connectToMongoDB } from './Mongo/index.js';
 import config from './config/config.js';
 import { runExample } from './Embeddings/main.js';
-import { extractMediaMetadata, setupMongoDocs } from './main.js';
+import { annotateVideoTags, extractAndUploadImageVisionTags, setupMongoDocs } from './main.js';
 
 
 const app = express();
@@ -29,8 +29,10 @@ const start = async () => {
     console.log(`Server listening at http://localhost:${port}`);
   });
 
-  extractMediaMetadata();
-  setupMongoDocs();
+  // extractMediaMetadata();
+  // setupMongoDocs();
+  // extractAndUploadVisionTags();
+  annotateVideoTags();
 }
 
 start();

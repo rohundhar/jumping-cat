@@ -7,8 +7,8 @@ import { drive_v3 } from 'googleapis';
 import pLimit from 'p-limit';
 import { getFolder, getImageContent } from '../GDrive/files.js';
 import { MimeType } from '../GDrive/types.js';
-import { ImageMetadata } from '../Mongo/types.js';
-import { createValidKeys, extractValidParams } from '../Util/helpers.js';
+import { ImageMetadata, ValidImageMetadataKeys } from '../Mongo/types.js';
+import { extractValidParams } from '../Util/helpers.js';
 import { TaggableImage } from './types.js';
 
 const folderName = 'Safari 2024';
@@ -57,16 +57,15 @@ export const extractImageMetadataTags = async (img: TaggableImage): Promise<Imag
 
   try {
     const metadata = await exifr.parse(content);
-    const keys = createValidKeys<ImageMetadata>();
 
     const parsedMetadata = extractValidParams({
       params: metadata,
-      ValidKeys: keys
+      ValidKeys: ValidImageMetadataKeys
     }) as ImageMetadata;
     
     return parsedMetadata;
   } catch (err) {
-    console.warn(`Error while trying to extract metadata from image: ${name} - ${id}`);
+    console.warn(`Error while trying to extract metadata from image: ${name} - ${id}`,err);
     return {};
   }
 }
