@@ -4,6 +4,8 @@ import { connectToMongoDB } from './Mongo/index.js';
 import config from './config/config.js';
 import { runExample } from './Embeddings/main.js';
 import { annotateVideoTags, extractAndUploadImageVisionTags, setupMongoDocs } from './main.js';
+import { getFaceMatcher } from './FaceTrainingService/main.js';
+import { compressAssets } from './FaceTrainingService/compression.js';
 
 
 const app = express();
@@ -32,7 +34,9 @@ const start = async () => {
   // extractMediaMetadata();
   // setupMongoDocs();
   // extractAndUploadVisionTags();
-  annotateVideoTags();
+  // annotateVideoTags();
+  // getFaceMatcher();
+  // compressAssets('./Assets/FaceTraining', './Assets/FaceTrainingCompressed');
 }
 
 start();

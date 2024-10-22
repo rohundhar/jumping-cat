@@ -9,7 +9,7 @@ async function prepareTrainingData(assetsDir: string): Promise<{ [label: string]
     const trainingData: { [label: string]: string[] } = {};
 
     try {
-        const faceTrainingDir = path.join(assetsDir, 'FaceTraining');
+        const faceTrainingDir = path.join(assetsDir, 'FaceTrainingCompressed');
         const personDirs = await fs.readdir(faceTrainingDir);
 
         for (const personDir of personDirs) {
