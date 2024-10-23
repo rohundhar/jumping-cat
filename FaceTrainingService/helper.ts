@@ -46,21 +46,24 @@ export async function getTrainingData() {
 
 }
 
-export const extractFacialRecognitionTags = async (img: TaggableImage) => {
+const DEBUG_LOG = false;
+export const extractFacialRecognitionTags = async (matcher: faceapi.FaceMatcher, img: TaggableImage) => {
   
     const { content, id, name } = img;
-
-    const faceMatcher = await getFaceMatcher();
   
+    const results: string [] = [];
     try {
       const img = await canvas.loadImage(content);
       const queryDetections = await faceapi.detectAllFaces(img as any).withFaceLandmarks().withFaceDescriptors();
     
       for (const detection of queryDetections) {
-          const bestMatch = faceMatcher.findBestMatch(detection.descriptor!);
-          console.log(`Best match: ${bestMatch.label} (confidence: ${bestMatch.distance})`);
+          const bestMatch = matcher.findBestMatch(detection.descriptor!);
+          results.push(bestMatch.label);
+          if (DEBUG_LOG) console.log(`Best match: ${bestMatch.label} (confidence: ${bestMatch.distance})`);
       }
     } catch (err) {
       console.log(`Error while trying to detect faces for ${name} - ${id}`, err);
     }
+
+    return results.filter(result => result !== 'unknown');
   }

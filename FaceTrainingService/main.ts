@@ -117,18 +117,21 @@ async function loadSavedModel(): Promise<faceapi.LabeledFaceDescriptors[] | unde
 }
 
 
+let faceMatcher: faceapi.FaceMatcher;
+
 // Main function to run the training process
 export async function getFaceMatcher() {
 
-    const trainingData = await getTrainingData();
+    if (faceMatcher) {
+        return faceMatcher;
+    }
 
     await loadModels();
 
     const storedDescriptors = await loadSavedModel();
 
-    let faceMatcher: faceapi.FaceMatcher;
-
     if (!storedDescriptors) {
+        const trainingData = await getTrainingData();
         console.log("Training a new model...");
         const {
             labeledFaceDescriptors, 

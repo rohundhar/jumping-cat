@@ -3,7 +3,7 @@ import express from 'express';
 import { connectToMongoDB } from './Mongo/index.js';
 import config from './config/config.js';
 import { runExample } from './Embeddings/main.js';
-import { annotateVideoTags, extractAndUploadImageVisionTags, setupMongoDocs } from './main.js';
+import { annotateVideoTags, extractAndUploadImageFacialTags, extractAndUploadImageVisionTags, setupMongoDocs } from './main.js';
 import { getFaceMatcher } from './FaceTrainingService/main.js';
 import { compressAssets } from './FaceTrainingService/compression.js';
 
@@ -37,6 +37,7 @@ const start = async () => {
   // annotateVideoTags();
   // getFaceMatcher();
   // compressAssets('./Assets/FaceTraining', './Assets/FaceTrainingCompressed');
+  // extractAndUploadImageFacialTags();
 }
 
 start();

@@ -13,6 +13,7 @@ import { getAllMedia, getAllMediaMongo, getOrCreateMedia } from './Mongo/Helpers
 import { extractImageMetadataTags } from './TaggingService/metadataTags.js';
 import { analyzeVideo, extractVisionTags } from './TaggingService/main.js';
 import { request } from 'http';
+import { extractFacialRecognitionTags } from './FaceTrainingService/helper.js';
 
 const folderName = 'Safari 2024';
 
@@ -64,6 +65,56 @@ export const extractAndUploadImageVisionTags = async () => {
     bar.stop();
 
 }
+
+export const extractAndUploadImageFacialTags = async () => {
+
+  const {
+    allImages
+  } = await getAllMediaMongo();
+
+
+  console.log(`Found ${allImages.length} pieces of media`);
+
+
+  const matcher = await getFaceMatcher();
+
+  const bar = new cliProgress.SingleBar({}, cliProgress.Presets.rect);
+
+  bar.start(allImages.length, 0);
+
+  const limit = pLimit(10);
+
+  await Promise.all(allImages.map(async (media) => {
+      await limit(async () => { // Wrap the processing function with limit
+        try {
+          let content = await getImageContent(media.gDriveId);
+          if (media.mimeType === MimeType.HEIC) {
+            content = Buffer.from(await convert({
+              buffer: content,
+              format: 'JPEG',
+              quality: 1
+            }));
+          }
+          const tags = await extractFacialRecognitionTags(matcher, {
+            id: media.gDriveId,
+            name: media.gDriveFilename,
+            content
+          });
+          media.facialRecognitionTags = tags;
+          await media.save();
+        } catch (error) {
+            console.error(`Error processing ${media.gDriveFilename}:${media.mimeType}`, error);
+        } finally { // Ensure progress bar updates even on error
+          bar.increment();
+        }
+      });
+    }));
+
+    bar.stop();
+
+}
+
+
 
 
 const REQUESTS_PER_MINUTE = 2;
