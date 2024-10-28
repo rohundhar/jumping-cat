@@ -6,6 +6,7 @@ import pLimit from 'p-limit';
 import { BUCKET_NAME, getGDriveService } from './auth.js';
 import { MimeType } from './types.js';
 import { Media } from '../Mongo/Schemas/Media.js';
+import { VideoTypes } from '../Mongo/Helpers/media.js';
 
 
 const storage = new Storage({
@@ -27,8 +28,13 @@ async function downloadFile(driveService: any, fileId: string, filePath: string)
 }
 
 
-const getAllFilesInFolder = async (driveService: drive_v3.Drive, folderId: string): Promise<drive_v3.Schema$File[]> => {
-    let allFiles: drive_v3.Schema$File[] = [];
+export interface GoogleDriveFile {
+  file: drive_v3.Schema$File;
+  parentFolders: string[]
+}
+
+const getAllFilesInFolder = async (driveService: drive_v3.Drive, folderId: string, parentFolders: string []): Promise<GoogleDriveFile[]> => {
+    let allFiles: GoogleDriveFile[] = [];
     let pageToken: string | undefined | null = undefined;
     let res;
 
@@ -41,18 +47,19 @@ const getAllFilesInFolder = async (driveService: drive_v3.Drive, folderId: strin
         });
 
         // If any of these files are folders, then we need to get all files within THAT FOLDER
-        const promises: Promise<drive_v3.Schema$File[]>[] = [];
-        const mediaFiles: drive_v3.Schema$File[] = [];
+        const promises: Promise<GoogleDriveFile[]>[] = [];
+        const mediaFiles: GoogleDriveFile[] = [];
 
         res.data.files?.forEach((file) => {
             if (file.id && file.mimeType === 'application/vnd.google-apps.folder') {
-                promises.push(getAllFilesInFolder(driveService, file.id))
+              const nextFolders = file.name ? [...parentFolders, file.name] : parentFolders;
+              promises.push(getAllFilesInFolder(driveService, file.id, nextFolders))
             } else {
-                mediaFiles.push(file)
+                mediaFiles.push({ file, parentFolders });
             }
         });
 
-        let results: drive_v3.Schema$File[][];
+        let results: GoogleDriveFile[][];
         if (promises.length > 0) {
             results = await Promise.all(promises);
             allFiles = allFiles.concat(mediaFiles, ...results)
@@ -69,7 +76,7 @@ const getAllFilesInFolder = async (driveService: drive_v3.Drive, folderId: strin
 }
 
 
-export const getFolder = async (name: string): Promise<drive_v3.Schema$File[]> => {
+export const getFolder = async (name: string): Promise<GoogleDriveFile[]> => {
     const driveService = await getGDriveService();
     
     if (!driveService) {
@@ -90,7 +97,7 @@ export const getFolder = async (name: string): Promise<drive_v3.Schema$File[]> =
 
         if (folderId) {
             console.log(`Folder found: ${name} (ID: ${folderId})`);
-            const allFiles = await getAllFilesInFolder(driveService, folderId);
+            const allFiles = await getAllFilesInFolder(driveService, folderId, [name]);
             console.log("All Files", allFiles.length);
             // console.log('Some Files', allFiles.slice(0, 10));
 
@@ -121,11 +128,9 @@ const getVideoFileName = (fileId: string) => {
 }
 
 
-const videoTypes = [MimeType.QUICKTIME, MimeType.MP4];
-
 export const getOrUploadManyVideos = async (allMedia: Media[]): Promise<any> => {
 
-  const videos = allMedia.filter((media) => videoTypes.includes(media.mimeType as MimeType));
+  const videos = allMedia.filter((media) => VideoTypes.includes(media.mimeType as MimeType));
 
   const limit = pLimit(5);
 

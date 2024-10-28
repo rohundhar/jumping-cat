@@ -17,3 +17,15 @@ export function extractValidParams<K extends string>(props: { params: Record<str
 
   return queryParams;
 };
+
+
+export const allKeyed = async <T extends Record<string, Promise<any>>>(
+  namedPromises: T
+): Promise<{ [K in keyof T]: Awaited<T[K]> }> => {
+  const entries = Object.entries(namedPromises);
+  const results = await Promise.all(
+    entries.map(async ([key, promise]) => [key, await promise])
+  );
+
+  return Object.fromEntries(results) as { [K in keyof T]: Awaited<T[K]> };
+};

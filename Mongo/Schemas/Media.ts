@@ -3,11 +3,18 @@ import { BaseSchema } from './BaseSchema.js';
 import { MimeType } from '../../GDrive/types.js';
 import { ImageMetadata, MediaType } from '../types.js';
 
-export interface Media extends BaseSchema, Document { // Add Document interface
+
+export interface TagEmbeddings {
+  individual: number[];
+  phrases: number[];
+}
+
+export interface Media extends BaseSchema { // Add Document interface
 
   // Extract from drive file
   gDriveId: string;
   gDriveFilename: string;
+  gDriveFolders: string[];
   mimeType?: MimeType;
   thumbnailLink?: string;
   webContentLink?: string;
@@ -18,8 +25,11 @@ export interface Media extends BaseSchema, Document { // Add Document interface
   googleVisionTags: string[];
   customTags: string[];
 
+  tagEmbeddings: TagEmbeddings;
 
   tag_embeddings?: number[][];
+  tags: string[];
+  mediaType: MediaType;
 }
 
 export interface MediaModel extends Model<Media> {}
@@ -33,6 +43,10 @@ const MediaSchema = new Schema<Media, MediaModel>({
   gDriveFilename: {
     required: true,
     type: String,
+  },
+  gDriveFolders: {
+    type: [String],
+    default: []
   },
   fileMetadata: {
       type: Schema.Types.Mixed
@@ -59,6 +73,16 @@ const MediaSchema = new Schema<Media, MediaModel>({
       type: String
   },
   tag_embeddings: [[Number]],
+  tagEmbeddings: {
+    individual: {
+      type: [Number],
+      default: []
+    },
+    phrases: {
+      type: [Number],
+      default: []
+    }
+  },
   createdAt: { 
     type: Date, 
     default: Date.now,
@@ -86,28 +110,24 @@ MediaSchema.virtual('mediaType').get(function (this: Media) {
   }
 });
 
-MediaSchema.virtual('tags').get(function (this: Media) {
-  const allTags = [
-      ...this.facialRecognitionTags,
-      ...this.googleVisionTags,
-      ...this.customTags
-  ];
-
-  // Remove duplicates and return the unique tags
-  return [...new Set(allTags)];
-});
-
-MediaSchema.set('toJSON', { virtuals: true });
 
 const computeTags = (media:Media) => {
   const allTags = [
     ...media.facialRecognitionTags,
     ...media.googleVisionTags,
     ...media.customTags
-  ];
+  ].map(tag => tag.toLowerCase());
 
   return [...new Set(allTags)];
 }
+
+MediaSchema.virtual('tags').get(function (this: Media) {
+  return computeTags(this);
+});
+
+MediaSchema.set('toJSON', { virtuals: true });
+
+
 MediaSchema.pre<Media>('save', async function (next) {
     this.updatedAt = new Date();
     if (

@@ -1,6 +1,7 @@
 import mongoose from 'mongoose';
 import config from '../config/config.js';
 import MediaModel from './Schemas/Media.js';
+import UserFolderModel from './Schemas/UserFolder.js';
 
 
 
@@ -8,18 +9,17 @@ let isReconnecting = false;
 const reconnectInterval = 5000; // 5 seconds
 
 
+const mongoConfig = {
+  retryWrites: true,
+  minPoolSize: 2,
+}
+
 export const connectToMongoDB = async (): Promise<void> => {
     try {
-        await mongoose.connect(config.mongoURI, {
-            // These options are important for production stability:
-            // autoIndex: false, // Don't build indexes at startup
-            minPoolSize: 2, // Maintain at least 2 open connections
-            maxPoolSize: 10, // Maximum number of connections in the pool
-            // serverSelectionTimeoutMS: 5000, // Keep trying to connect
-            // socketTimeoutMS: 45000, // Close sockets after 45 seconds of inactivity
-            // family: 4 // Use IPv4, or 6 if you prefer
-        });
+        await mongoose.connect(config.mongoURI, mongoConfig);
 
+
+        // mongoose.set('debug', true);
 
         console.log('Connected to MongoDB!');
 
@@ -36,11 +36,7 @@ export const connectToMongoDB = async (): Promise<void> => {
                 console.log('Attempting to reconnect...');
             
                 setTimeout(() => {
-                  mongoose.connect(config.mongoURI, { // Or your connection string
-                    minPoolSize: 2, // Maintain at least 2 open connections
-                    maxPoolSize: 10, // Maximum number of connections in the pool
-                    // ... other options ...
-                  })
+                  mongoose.connect(config.mongoURI, mongoConfig)
                     .then(() => {
                       console.log('Successfully reconnected to MongoDB');
                       isReconnecting = false;
@@ -72,6 +68,9 @@ export const connectToMongoDB = async (): Promise<void> => {
     }
 }
 
-export default {
-  media: MediaModel
+const models = {
+  media: MediaModel,
+  userFolder: UserFolderModel
 }
+
+export default models;

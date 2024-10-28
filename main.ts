@@ -1,23 +1,16 @@
 import cliProgress from 'cli-progress';
-import * as fs from 'fs';
-import * as faceapi from 'face-api.js';
-import exifr from 'exifr';
 import canvas from 'canvas';
 import convert from 'heic-convert';
 import { getFaceMatcher } from './FaceTrainingService/main.js';
 import { getFolder, getImageContent, getOrUploadVideo } from './GDrive/files.js';
 import { MimeType } from './GDrive/types.js';
-import { drive_v3 } from 'googleapis';
 import pLimit from 'p-limit';
 import { getAllMedia, getAllMediaMongo, getOrCreateMedia } from './Mongo/Helpers/media.js';
 import { extractImageMetadataTags } from './TaggingService/metadataTags.js';
 import { analyzeVideo, extractVisionTags } from './TaggingService/main.js';
-import { request } from 'http';
 import { extractFacialRecognitionTags } from './FaceTrainingService/helper.js';
 
 const folderName = 'Safari 2024';
-
-const imagetypes = [MimeType.JPG];
 
 export const extractAndUploadImageVisionTags = async () => {
 
@@ -189,18 +182,19 @@ export const setupMongoDocs = async () => {
 
   const limit = pLimit(10);
 
+  const allFiles = allFilesInDrive;
+
   const bar = new cliProgress.SingleBar({}, cliProgress.Presets.shades_classic);
 
-  const allFiles = allFilesInDrive;
 
   bar.start(allFiles.length, 0);
 
-
-  await Promise.all(allFiles.map(async (file) => {
+  await Promise.all(allFiles.map(async (gDriveFile) => {
     await limit(async () => { // Wrap the processing function with limit
+      const { file } = gDriveFile;
       try {
         if (file.id) {
-          const media = getOrCreateMedia(file);
+          const media = getOrCreateMedia(gDriveFile);
         } 
       } catch (error) {
           console.error(`Error processing ${file.name}:${file.mimeType}`, error);

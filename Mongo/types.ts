@@ -5,6 +5,9 @@ export enum MediaType {
 }
 
 interface ImageSharedProperties {
+
+  IsTimelineVerified?: boolean;
+
   // Beginning of Shared Properties // 
   Make?: string;
   Model?: string;
