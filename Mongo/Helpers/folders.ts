@@ -48,12 +48,15 @@ export const addMediaToFolder = async ({folderId, newMediaIds}: { folderId: stri
     const userFolder = await models.userFolder.findOne({ _id: folderId}).exec();
 
     if (userFolder) {
-      const files = userFolder.files as string[];
+      const files = new Set(userFolder.files.map(String));
 
       const combinedFiles = [...new Set([...files,...newMediaIds])];
 
+      console.log('combined files', combinedFiles);
       await models.userFolder.findOneAndUpdate({_id: folderId}, {
-        files: combinedFiles
+        $set: {
+          files: combinedFiles
+        }
       }).exec();
 
       return true;

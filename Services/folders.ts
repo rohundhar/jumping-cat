@@ -14,6 +14,8 @@ export class FolderService {
   async getUserFolders(): ServerResponse<{results: UserFolder[]}> {
     try {
 
+      console.log('get all user folders');
+
       const { request: { auth }}= this.context;
       const { userId } = auth;
 
@@ -49,11 +51,10 @@ export class FolderService {
 
   @POST
   @Path('add-media')
-  async addMediaToFolder(
-    @QueryParam('mediaIds') newMediaIds: string[],
-    @QueryParam('folderId') folderId: string
-  ): ServerResponse<any> {
+  async addMediaToFolder(response: { mediaIds: string[], folderId: string } ): ServerResponse<any> {
     try {
+      const { mediaIds: newMediaIds, folderId } = response;
+      console.log('add media to user folders', newMediaIds, folderId);
       const mediaAdded = await addMediaToFolder({ newMediaIds, folderId });
       return {
         success: mediaAdded,
@@ -68,15 +69,14 @@ export class FolderService {
 
   @POST
   @Path("create")
-  async createFolder(
-    @QueryParam("name") name: string,
-    @QueryParam("color") color: string,
-  ): ServerResponse<any> {
+  async createFolder(response: {name: string, color: string}): ServerResponse<any> {
     try {
 
       const { request: { auth }} = this.context;
       const { userId } = auth;
+      const { name, color } = response;
 
+      console.log('create new folder', name, color);
       if (userId) {
         const newFolderCreated = await createNewFolder({
           name,
@@ -105,13 +105,13 @@ export class FolderService {
 
   @POST
   @Path("delete")
-  async deleteFolder(
-    @QueryParam("folderId") folderId: string,
-  ): ServerResponse<any> {
+  async deleteFolder(response: { folderId: string } ): ServerResponse<any> {
 
     try {
       const { request: { auth }} = this.context;
       const { userId } = auth;
+
+      const { folderId } = response;
 
       if (userId) {
         const folderDeletion = await deleteFolder(folderId);

@@ -130,7 +130,12 @@ export const resetEmbeddings = async () => {
   }
 }
 
-export const getQueryResults = async (query: string) => {
+
+export interface VectorResult {
+  _id: string;
+  score: number
+}
+export const getIndividualQueryResults = async (query: string): Promise<VectorResult[]> => {
 
   try {
     const queryVector = await generateQueryVector(query);
@@ -141,8 +146,8 @@ export const getQueryResults = async (query: string) => {
           "index": "TagEmbeddingsIndividual",
           "path": "tagEmbeddings.individual",
           "queryVector": queryVector,
-          "numCandidates": 1000,
-          "limit": 50
+          "numCandidates": 2000,
+          "limit": 150
         }
       },
       {
@@ -153,34 +158,12 @@ export const getQueryResults = async (query: string) => {
       {
         "$project": {
             "tagEmbeddings": 0,
-            // "_id": 0, 
-
-            // "mimeType": 0,
-            // "thumbnailLink": 0,
-            // "webContentLink": 0,
-            // "fileMetadata": 0,
-            // "facialRecognitionTags": 0,
-            // "googleVisionTags": 0,
-            // "customTags": 0,
-            // "gDriveFilename": 0,
-            // "gDriveFolders": 0,
         }
       },
       {
         "$project": {
-            "gDriveId": 1,
             "score": 1,
             "_id": 1, 
-
-            "gDriveFilename": 1,
-            "mimeType": 1,
-            "thumbnailLink": 1,
-            "webContentLink": 1,
-            "fileMetadata": 1,
-            "facialRecognitionTags": 1,
-            "googleVisionTags": 1,
-            "customTags": 1,
-            "gDriveFolders": 1,
         }
       },
     ]
@@ -189,7 +172,51 @@ export const getQueryResults = async (query: string) => {
 
     results.sort((a,b) => b.score = a.score);
   
-    return results;
+    return results as VectorResult[];
+  } catch (err) {
+    console.warn(`Failure while trying to perform vector query`, err);
+    return [];
+  }
+}
+
+export const getPhrasesQueryResults = async (query: string): Promise<VectorResult[]> => {
+
+  try {
+    const queryVector = await generateQueryVector(query);
+  
+    const pipeline = [
+      {
+        "$vectorSearch": {
+          "index": "TagEmbeddingsPhrases",
+          "path": "tagEmbeddings.phrases",
+          "queryVector": queryVector,
+          "numCandidates": 2000,
+          "limit": 150
+        }
+      },
+      {
+        "$addFields": {
+            "score": { "$meta": "vectorSearchScore" }
+        }
+      },
+      {
+        "$project": {
+            "tagEmbeddings": 0,
+        }
+      },
+      {
+        "$project": {
+            "score": 1,
+            "_id": 1, 
+        }
+      },
+    ]
+  
+    const results = await models.media.aggregate(pipeline).exec();
+
+    results.sort((a,b) => b.score = a.score);
+  
+    return results as VectorResult[];
   } catch (err) {
     console.warn(`Failure while trying to perform vector query`, err);
     return [];

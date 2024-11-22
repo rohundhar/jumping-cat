@@ -1,3 +1,4 @@
+import cliProgress from 'cli-progress';
 import { drive_v3 } from 'googleapis';
 import mongoose from 'mongoose';
 import models from '../index.js';
@@ -41,7 +42,7 @@ export const getOrCreateMedia = async (gFile: GoogleDriveFile): Promise<Media | 
 
     return media;
   } catch (err) {
-    console.warn(`Error while trying to get/create media: ${file.id}:${file.name}`)
+    console.warn(`Error while trying to get/create media: ${file.id}:${file.name}`, err);
     return undefined;
   }
 }
@@ -148,11 +149,11 @@ export const getAllMediaResults = async (): Promise<MediaResponse[]> => {
     {
       "$project": {
           "tagEmbeddings": 0,
-          "_id": 0, 
       }
     },
     {
       "$project": {
+          "_id": 1, 
           "gDriveFilename": 1,
           "gDriveId": 1,
           "mimeType": 1,
@@ -177,18 +178,34 @@ export const getAllMediaResults = async (): Promise<MediaResponse[]> => {
 
 }
 
-// export const populateMedia = async (mediaFiles: Media[]) => {
+export const setupMongoDocs = async () => {
+  const allFilesInDrive = await getFolder(folderName);
 
-//   const limit = pLimit(10);
+  const limit = pLimit(10);
 
-//   const allPopulatedMedia = await Promise.all(mediaFiles.map (async (media) => {
-//     return await limit(async () => {
-//       try {
-//         const content = await getImageContent(media.gDriveId);
+  const allFiles = allFilesInDrive;
 
-//       } catch (err) {
-//         console.warn(`Error while trying to populate media with buffer: ${media.gDriveFilename}`)
-//       }
-//     })
-//   }))
-// }
+  const bar = new cliProgress.SingleBar({}, cliProgress.Presets.shades_classic);
+
+
+  bar.start(allFiles.length, 0);
+
+  await Promise.all(allFiles.map(async (gDriveFile) => {
+    await limit(async () => { // Wrap the processing function with limit
+      const { file } = gDriveFile;
+      try {
+        if (file.id) {
+          const media = getOrCreateMedia(gDriveFile);
+        } 
+      } catch (error) {
+          console.error(`Error processing ${file.name}:${file.mimeType}`, error);
+      } finally { // Ensure progress bar updates even on error
+        bar.increment();
+      }
+    });
+  }));
+  
+  bar.stop();
+
+  console.log('Media Setup Complete');
+}

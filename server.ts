@@ -5,26 +5,27 @@ import express from 'express';
 import { Server } from 'typescript-rest';
 import { connectToMongoDB } from './Mongo/index.js';
 import config from './config/config.js';
-import { resetEmbeddings, runEmbeddingsExample, getQueryResults, updateAllEmbeddings } from './Embeddings/main.js';
-import { annotateVideoTags, extractAndUploadImageFacialTags, extractAndUploadImageVisionTags, setupMongoDocs } from './main.js';
+import { resetEmbeddings, runEmbeddingsExample, updateAllEmbeddings } from './Embeddings/main.js';
+import { annotateVideoTags, extractAndUploadImageFacialTags, extractAndUploadImageVisionTags } from './main.js';
 import { getFaceMatcher } from './FaceTrainingService/main.js';
 import { compressAssets } from './FaceTrainingService/compression.js';
 import { assignCustomTags } from './TaggingService/customTags.js';
 import { correctMediaDates, extractMetadataTagsFromVideo } from './TaggingService/metadataTags.js';
-import { getAllMedia } from './Mongo/Helpers/media.js';
+import { getAllMedia, setupMongoDocs } from './Mongo/Helpers/media.js';
 import { getFolder } from './GDrive/files.js';
 import models from './Mongo/index.js';
 import { Media } from './Mongo/Schemas/Media.js';
 import { HomeService } from './Services/home.js';
 import { clerkMiddleware } from '@clerk/express';
 import { FolderService } from './Services/folders.js';
+import { ProxyService } from './Services/proxy.js';
 
 
 const app = express();
 
 const init = async () => {
   await connectToMongoDB();
-  Server.buildServices(app, HomeService, FolderService);
+  Server.buildServices(app, HomeService, FolderService, ProxyService);
 }
 
 const start = async () => {
@@ -45,8 +46,6 @@ const start = async () => {
 
   await init();
 
-  // app.use(ClerkExpressRequire)
-
   const port = config.PORT;
 
   app.listen(port, () => {
@@ -54,9 +53,9 @@ const start = async () => {
   });
 
 
-  // await getAllMedia();
-  // console.log('Done updating media');
+  await setupMongoDocs();
 
+  
   // extractMediaMetadata();
   // setupMongoDocs();
   // extractAndUploadVisionTags();

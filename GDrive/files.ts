@@ -1,5 +1,5 @@
 import * as fs from 'fs';
-import { Storage } from '@google-cloud/storage';
+import { File, Storage } from '@google-cloud/storage';
 import { drive_v3 } from 'googleapis';
 import cliProgress from 'cli-progress';
 import pLimit from 'p-limit';
@@ -148,7 +148,7 @@ export const getOrUploadManyVideos = async (allMedia: Media[]): Promise<any> => 
       return limit(async () => {
 
         if (file.id) {
-          const url = await getOrUploadVideo(file, multibar);
+          const url = await getOrUploadVideo(file.id, multibar);
           bar.increment();
         }
 
@@ -160,11 +160,9 @@ export const getOrUploadManyVideos = async (allMedia: Media[]): Promise<any> => 
   multibar.stop(); // Stop the multibar after all uploads are complete
 }
 
-export const getOrUploadVideo = async (file: Media, multiBar: cliProgress.MultiBar): Promise<string | undefined> => {
+export const getOrUploadVideo = async (fileId: string, multiBar?: cliProgress.MultiBar): Promise<string | undefined> => {
 
   const service = await getGDriveService();
-
-  const { gDriveId: fileId} = file;
   
   if (!service || !fileId) {
     return undefined;
@@ -180,14 +178,17 @@ export const getOrUploadVideo = async (file: Media, multiBar: cliProgress.MultiB
   if (!exists) {
     try {
       const driveFile = await service.files.get({ fileId, alt: 'media' }, { responseType: 'stream' });
-      const bar = multiBar.create(driveFile.headers["content-length"], 0, { filename: name})
+
+      // const bar = multiBar.create(driveFile.headers["content-length"], 0, { filename: name})
+
       const totalBytes = parseInt(driveFile.headers['content-length'] as string, 10);
-      bar.start(totalBytes, 0); // Start progress bar with total size
+
+      // bar.start(totalBytes, 0); // Start progress bar with total size
 
       let uploadedBytes = 0;
       driveFile.data.on('data', (chunk) => {
           uploadedBytes += chunk.length;
-          bar.update(uploadedBytes, { filename: name}); // Update progress bar with uploaded bytes
+          // bar.update(uploadedBytes, { filename: name}); // Update progress bar with uploaded bytes
       });
       
 
@@ -196,11 +197,11 @@ export const getOrUploadVideo = async (file: Media, multiBar: cliProgress.MultiB
     
       await new Promise<void>((resolve, reject) => {
           writeStream.on('finish', () => {
-            bar.stop(); // Stop progress bar on finish
+            // bar.stop(); // Stop progress bar on finish
             resolve();
           });
           writeStream.on('error', () => {
-            bar.stop();
+            // bar.stop();
             reject()
           });
       });
@@ -213,4 +214,19 @@ export const getOrUploadVideo = async (file: Media, multiBar: cliProgress.MultiB
   
 
   return `gs://${BUCKET_NAME}/${fileName}`;
+}
+
+
+export const getVideoFile = async (fileId: string): Promise<File> => {
+  const gscUri = await getOrUploadVideo(fileId);
+
+  if (!gscUri) {
+    throw new Error(`Failed to get or upload video`);
+  }
+
+  const bucket = storage.bucket(BUCKET_NAME);
+  const fileName = getVideoFileName(fileId);
+  const gscFile = bucket.file(fileName);
+
+  return gscFile;
 }

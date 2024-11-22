@@ -13,8 +13,9 @@ export interface UserFolderModel extends Model<UserFolder> {}
 
 const UserFolderSchema = new Schema<UserFolder, UserFolderModel>({
   userId: {
-      type: String,
-      required: true,
+    type: String,
+    required: true,
+    index: true
   },
   name: {
     type: String,

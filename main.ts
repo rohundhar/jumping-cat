@@ -143,7 +143,7 @@ export const annotateVideoTags = async () => {
   await Promise.all(allVideos.map(async (media) => {
       await limit(async () => { // Wrap the processing function with limit
         try {
-          const key = await getOrUploadVideo(media, multibar);
+          const key = await getOrUploadVideo(media.gDriveId, multibar);
           if (key) {
             const elapsedTime = Date.now() - startTime;
             const expectedRequestCount = (elapsedTime / MILLISECONDS_PER_MINUTE) * REQUESTS_PER_MINUTE;
@@ -177,32 +177,3 @@ export const annotateVideoTags = async () => {
 
 }
 
-export const setupMongoDocs = async () => {
-  const allFilesInDrive = await getFolder(folderName);
-
-  const limit = pLimit(10);
-
-  const allFiles = allFilesInDrive;
-
-  const bar = new cliProgress.SingleBar({}, cliProgress.Presets.shades_classic);
-
-
-  bar.start(allFiles.length, 0);
-
-  await Promise.all(allFiles.map(async (gDriveFile) => {
-    await limit(async () => { // Wrap the processing function with limit
-      const { file } = gDriveFile;
-      try {
-        if (file.id) {
-          const media = getOrCreateMedia(gDriveFile);
-        } 
-      } catch (error) {
-          console.error(`Error processing ${file.name}:${file.mimeType}`, error);
-      } finally { // Ensure progress bar updates even on error
-        bar.increment();
-      }
-    });
-  }));
-  
-  bar.stop();
-}
