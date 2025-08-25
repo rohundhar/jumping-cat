@@ -1,7 +1,7 @@
 import cliProgress from 'cli-progress';
 import { drive_v3 } from 'googleapis';
 import mongoose from 'mongoose';
-import models from '../index.js';
+import models, { connectToMongoDB, disconnectFromMongoDB } from '../index.js';
 import { Media, MediaModel } from '../Schemas/Media.js';
 import { getFolder, getImageContent, GoogleDriveFile } from '../../GDrive/files.js';
 import pLimit from 'p-limit';
@@ -209,3 +209,78 @@ export const setupMongoDocs = async () => {
 
   console.log('Media Setup Complete');
 }
+
+export const setupMongoDocsWithBulkWrite = async () => {
+  console.log('Connecting to MongoDB...');
+  await connectToMongoDB();
+  
+  console.log('Fetching all files from Google Drive...');
+  const allFilesInDrive = await getFolder(folderName);
+
+  if (!allFilesInDrive || allFilesInDrive.length === 0) {
+    console.log('No files found in Google Drive folder.');
+    await disconnectFromMongoDB();
+    return;
+  }
+
+  console.log(`Found ${allFilesInDrive.length} files. Preparing bulk operation...`);
+
+
+    // const media = await models.media.findOneAndUpdate(
+    //   {
+    //     gDriveId: file.id
+    //   },
+    //   {
+    //     gDriveFilename: file.name,
+    //     gDriveFolders: parentFolders,
+    //     webContentLink: file.webContentLink,
+    //     thumbnailLink: file.thumbnailLink,
+    //     mimeType: file.mimeType
+    //   },
+    //   { 
+    //     upsert: true,
+    //     new: true,
+    //     setDefaultsOnInsert: true,
+    //   }, // Options for upsert
+    // ).exec();
+
+  // Prepare the operations for bulkWrite
+  const bulkOps = allFilesInDrive.map(({file, parentFolders}) => ({
+    updateOne: {
+      filter: { gDriveId: file.id },
+      update: {
+        $set: {
+          gDriveFilename: file.name,
+          gDriveFolders: parentFolders,
+          webContentLink: file.webContentLink,
+          thumbnailLink: file.thumbnailLink,
+          mimeType: file.mimeType
+        }
+      },
+      upsert: true
+    }
+  }));
+
+  const bar = new cliProgress.SingleBar({}, cliProgress.Presets.shades_classic);
+  bar.start(bulkOps.length, 0);
+
+  // Batch the operations to avoid sending a single massive request
+  const batchSize = 500;
+  for (let i = 0; i < bulkOps.length; i += batchSize) {
+    const batch = bulkOps.slice(i, i + batchSize);
+    try {
+      await models.media.bulkWrite(batch);
+      bar.update(i + batch.length);
+    } catch (error) {
+      console.error(`\nError processing batch starting at index ${i}:`, error);
+    }
+  }
+
+  bar.stop();
+
+  console.log('Mongo Docs setup complete.');
+  await disconnectFromMongoDB();
+  console.log('Disconnected from MongoDB.');
+};
+
+setupMongoDocsWithBulkWrite();

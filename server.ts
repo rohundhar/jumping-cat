@@ -53,7 +53,7 @@ const start = async () => {
   });
 
 
-  await setupMongoDocs();
+  // await setupMongoDocs();
 
   
   // extractMediaMetadata();

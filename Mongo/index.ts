@@ -14,6 +14,15 @@ const mongoConfig = {
   minPoolSize: 2,
 }
 
+export const disconnectFromMongoDB = async () => {
+  try {
+    await mongoose.disconnect();
+  }
+  catch (err: any) {
+    console.log(`Failure to disconnect from MongoDB: ${err.message}`);
+  }
+};
+
 export const connectToMongoDB = async (): Promise<void> => {
     try {
         await mongoose.connect(config.mongoURI, mongoConfig);
